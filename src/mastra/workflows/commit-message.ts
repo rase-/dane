@@ -1,17 +1,17 @@
-import { confirm } from '@inquirer/prompts';
-import { Step, Workflow } from '@mastra/core';
-import chalk from 'chalk';
-import { execSync } from 'child_process';
-import { z } from 'zod';
+import { confirm } from '@inquirer/prompts'
+import { Step, Workflow } from '@mastra/core'
+import chalk from 'chalk'
+import { execSync } from 'child_process'
+import { z } from 'zod'
 
-import { fsTool } from '../tools/fs.js';
+import { fsTool } from '../tools/fs.js'
 
 export const commitMessageGenerator = new Workflow({
   name: 'commit-message',
   triggerSchema: z.object({
     repoPath: z.string(),
   }),
-});
+})
 
 const getDiff = new Step({
   id: 'getDiff',
@@ -19,17 +19,19 @@ const getDiff = new Step({
     diff: z.string(),
   }),
   execute: async ({ context }) => {
-    const repoPath = context?.machineContext?.getStepPayload<{ repoPath: string }>('trigger')?.repoPath;
+    const repoPath = context?.machineContext?.getStepPayload<{
+      repoPath: string
+    }>('trigger')?.repoPath
 
     // Get the git diff of staged changes
     const diff = execSync('git diff --staged', {
       cwd: repoPath,
       encoding: 'utf-8',
-    });
+    })
 
-    return { diff };
+    return { diff }
   },
-});
+})
 
 const readConventionalCommitSpec = new Step({
   id: 'readConventionalCommitSpec',
@@ -38,12 +40,17 @@ const readConventionalCommitSpec = new Step({
   }),
   execute: async () => {
     const fileData = await fsTool.execute({
-      context: { action: 'read', file: 'data/crawl/conventional-commit.json', data: '' },
-    });
+      context: {
+        action: 'read',
+        file: 'data/crawl/conventional-commit.json',
+        data: '',
+      },
+      suspend: () => Promise.resolve(),
+    })
 
-    return { fileData };
+    return { fileData }
   },
-});
+})
 
 const generateMessage = new Step({
   id: 'generateMessage',
@@ -53,14 +60,18 @@ const generateMessage = new Step({
     guidelines: z.array(z.string()),
   }),
   execute: async ({ context, mastra }) => {
-    const diffData = context?.machineContext?.getStepPayload<{ diff: string }>('getDiff');
-    const fileData = context?.machineContext?.getStepPayload<{ fileData: any }>('readConventionalCommitSpec');
+    const diffData = context?.machineContext?.getStepPayload<{ diff: string }>(
+      'getDiff'
+    )
+    const fileData = context?.machineContext?.getStepPayload<{ fileData: any }>(
+      'readConventionalCommitSpec'
+    )
 
     if (!diffData) {
-      return { commitMessage: '', generated: false, guidelines: [] };
+      return { commitMessage: '', generated: false, guidelines: [] }
     }
 
-    const daneCommitGenerator = mastra?.agents?.daneCommitMessage;
+    const daneCommitGenerator = mastra?.agents?.daneCommitMessage
 
     const res = await daneCommitGenerator?.generate(
       `
@@ -91,20 +102,20 @@ const generateMessage = new Step({
           generated: z.boolean(),
           guidelines: z.array(z.string()),
         }),
-      },
-    );
+      }
+    )
 
     if (!res?.object?.generated) {
-      throw new Error(res?.object?.commitMessage as string);
+      throw new Error(res?.object?.commitMessage as string)
     }
 
     return {
       commitMessage: res?.object?.commitMessage as string,
       generated: res?.object?.generated as boolean,
       guidelines: res?.object?.guidelines as string[],
-    };
+    }
   },
-});
+})
 
 const confirmationStep = new Step({
   id: 'confirmation',
@@ -112,24 +123,26 @@ const confirmationStep = new Step({
     confirm: z.boolean(),
   }),
   execute: async ({ context }) => {
-    const parentStep = context?.machineContext?.stepResults?.generateMessage;
+    const parentStep = context?.machineContext?.stepResults?.generateMessage
     if (!parentStep || parentStep.status !== 'success') {
-      return { confirm: false };
+      return { confirm: false }
     }
 
     if (!parentStep.payload.generated) {
-      return { confirm: false };
+      return { confirm: false }
     }
 
-    const commitMessage = parentStep.payload.commitMessage;
+    const commitMessage = parentStep.payload.commitMessage
 
     const confirmationMessage = await confirm({
-      message: `\n Would you like to use this commit message? \n\n ${chalk.yellow(commitMessage)}\n\n`,
-    });
+      message: `\n Would you like to use this commit message? \n\n ${chalk.yellow(
+        commitMessage
+      )}\n\n`,
+    })
 
-    return { confirm: confirmationMessage };
+    return { confirm: confirmationMessage }
   },
-});
+})
 
 const commitStep = new Step({
   id: 'commit',
@@ -137,24 +150,33 @@ const commitStep = new Step({
     commit: z.boolean(),
   }),
   execute: async ({ context }) => {
-    const parentStep = context?.machineContext?.stepResults?.confirmation;
-    if (!parentStep || parentStep.status !== 'success' || !parentStep.payload.confirm) {
-      throw new Error('Commit message generation cancelled');
+    const parentStep = context?.machineContext?.stepResults?.confirmation
+    if (
+      !parentStep ||
+      parentStep.status !== 'success' ||
+      !parentStep.payload.confirm
+    ) {
+      throw new Error('Commit message generation cancelled')
     }
 
-    if (context?.machineContext?.stepResults?.generateMessage?.status !== 'success') {
-      throw new Error('Failed to generate commit message');
+    if (
+      context?.machineContext?.stepResults?.generateMessage?.status !==
+      'success'
+    ) {
+      throw new Error('Failed to generate commit message')
     }
 
-    const commitMessage = context?.machineContext?.stepResults?.generateMessage?.payload?.commitMessage;
+    const commitMessage =
+      context?.machineContext?.stepResults?.generateMessage?.payload
+        ?.commitMessage
     execSync(`git commit -m "${commitMessage}"`, {
       cwd: context?.machineContext?.triggerData?.repoPath,
       encoding: 'utf-8',
-    });
+    })
 
-    return { commit: true };
+    return { commit: true }
   },
-});
+})
 
 commitMessageGenerator
   .step(getDiff)
@@ -162,4 +184,4 @@ commitMessageGenerator
   .then(generateMessage)
   .then(confirmationStep)
   .then(commitStep)
-  .commit();
+  .commit()
