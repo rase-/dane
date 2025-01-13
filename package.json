@@ -1,0 +1,55 @@
+{
+  "name": "@mastra/dane",
+  "version": "0.0.2-alpha.50",
+  "main": "dist/index.js",
+  "type": "module",
+  "files": [
+    "dist",
+    "data",
+    "test",
+    "test-files"
+  ],
+  "bin": {
+    "dane": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "npx tsc",
+    "start": "npx bun src/index.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/pdf-parse": "^1.1.4",
+    "tsx": "^4.19.2"
+  },
+  "dependencies": {
+    "@inquirer/prompts": "^7.2.1",
+    "@mastra/core": "latest",
+    "@mastra/engine": "latest",
+    "@mastra/firecrawl": "latest",
+    "@mastra/github": "latest",
+    "@mastra/memory": "latest",
+    "@mastra/rag": "latest",
+    "@mastra/stabilityai": "latest",
+    "boxen": "^8.0.1",
+    "chalk": "^5.3.0",
+    "cli-table3": "^0.6.5",
+    "commander": "^12.1.0",
+    "dotenv": "^16.4.7",
+    "drizzle-kit": "^0.30.1",
+    "execa": "^9.3.1",
+    "luxon": "^3.5.0",
+    "node-ical": "^0.20.1",
+    "node-screenshots": "^0.2.1",
+    "pdf-parse": "^1.1.1",
+    "playwright": "^1.49.1",
+    "playwright-core": "^1.49.1",
+    "sqlite3": "^5.1.7",
+    "typescript": "^5.5.4",
+    "zod": "^3.24.0"
+  }
+}
